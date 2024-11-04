@@ -1,0 +1,8 @@
+[package]
+name = "c2pa_opentdf"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+c2pa = { version = "0.37.1", features = ["file_io"] }
+opentdf = { path = "../opentdf-rs" }
