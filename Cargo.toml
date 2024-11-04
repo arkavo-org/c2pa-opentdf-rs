@@ -4,5 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-c2pa = { version = "0.37.1", features = ["file_io"] }
+c2pa = { version = "0.37.1", features = ["file_io","unstable_api"] }
 opentdf = { path = "../opentdf-rs" }
+serde = { version = "1.0.214", features = ["derive"] }
+tempfile = "3.13.0"
+signature = "2.2.0"
+p256 = { version = "0.13.2", features = ["ecdsa"] }
+rand_core = "0.6.4"
+base64 = "0.21.7"
+time = "0.3.36"
