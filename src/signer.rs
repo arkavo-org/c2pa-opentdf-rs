@@ -10,7 +10,6 @@ pub struct C2paOpenTdf {
     signer: Box<dyn Signer>,
     kas_url: String,
     policy: Option<Policy>,
-    signing_alg: SigningAlg,
 }
 
 impl C2paOpenTdf {
@@ -143,15 +142,12 @@ impl C2paOpenTdf {
         })?;
 
         // Verify the manifest is valid
-        if manifest_store.validation_status().is_some() {
-            // Check if there are any validation errors
-            if let Some(status) = manifest_store.validation_status() {
-                if !status.is_empty() {
-                    return Err(C2paOpenTdfError::VerificationFailed(format!(
-                        "C2PA validation failed: {:?}",
-                        status
-                    )));
-                }
+        if let Some(status) = manifest_store.validation_status() {
+            if !status.is_empty() {
+                return Err(C2paOpenTdfError::VerificationFailed(format!(
+                    "C2PA validation failed: {:?}",
+                    status
+                )));
             }
         }
 
@@ -243,7 +239,6 @@ impl C2paOpenTdfBuilder {
             signer,
             kas_url,
             policy: self.policy,
-            signing_alg: self.signing_alg,
         })
     }
 }
