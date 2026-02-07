@@ -22,6 +22,10 @@ cbindgen = "0.27"
 default = []
 kas = ["opentdf/kas"]
 
+[dev-dependencies]
+ureq = { version = "3", features = ["json"] }
+base64 = "0.22"
+
 [profile.release]
 opt-level = "z"
 lto = true

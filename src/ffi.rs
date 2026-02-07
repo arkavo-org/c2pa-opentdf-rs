@@ -7,6 +7,7 @@ use c2pa::{create_signer, Builder, Reader, SigningAlg};
 
 /// Result codes returned by FFI functions.
 #[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum C2paResultCode {
     /// Operation completed successfully.
     Success = 0,
