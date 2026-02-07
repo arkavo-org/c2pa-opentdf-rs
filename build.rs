@@ -2,6 +2,10 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
+    // Only regenerate the header when FFI source or cbindgen config changes.
+    println!("cargo:rerun-if-changed=src/ffi.rs");
+    println!("cargo:rerun-if-changed=cbindgen.toml");
+
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let output_dir = PathBuf::from(&crate_dir).join("include");
     std::fs::create_dir_all(&output_dir).unwrap();

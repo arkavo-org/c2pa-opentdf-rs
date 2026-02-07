@@ -13,6 +13,12 @@ TARGETS=(
     "aarch64-apple-ios-sim"
 )
 
+echo "==> Checking prerequisites..."
+if ! command -v xcodebuild &>/dev/null; then
+    echo "ERROR: xcodebuild not found. Install Xcode and its command-line tools."
+    exit 1
+fi
+
 echo "==> Checking required Rust targets..."
 for target in "${TARGETS[@]}"; do
     if ! rustup target list --installed | grep -q "^${target}$"; then

@@ -1,3 +1,25 @@
+//! C FFI for C2PA signing, verification, and manifest extraction.
+//!
+//! This module exposes four `extern "C"` functions that can be called from
+//! C or Swift via an XCFramework:
+//!
+//! - [`c2pa_sign_file`] — sign a media file with a C2PA manifest.
+//! - [`c2pa_verify_file`] — verify a C2PA manifest and return structured JSON.
+//! - [`c2pa_info_file`] — extract raw manifest JSON from a media file.
+//! - [`c2pa_string_free`] — free any string allocated by the functions above.
+//!
+//! # Memory management
+//!
+//! Every out-string (`*error_out`, `*result_json`, `*info_json`) is heap-
+//! allocated by this library. The **caller** must free each string exactly
+//! once by passing it to [`c2pa_string_free`]. If a function is called
+//! multiple times, the caller must free the previous out-string *before*
+//! the next call, otherwise the previous allocation will leak.
+//!
+//! Each function clears its out-pointers to null at the start of execution,
+//! so the caller can safely check for null to determine whether a string
+//! was returned.
+
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::panic;
@@ -28,11 +50,15 @@ pub enum C2paResultCode {
 // ---------------------------------------------------------------------------
 
 /// Write an error string into `*error_out` (if non-null).
+///
+/// If `msg` contains interior null bytes they are replaced with `?` so the
+/// caller always receives a valid error description.
 unsafe fn set_error(error_out: *mut *mut c_char, msg: &str) {
     if !error_out.is_null() {
-        if let Ok(c) = CString::new(msg) {
-            unsafe { *error_out = c.into_raw() };
-        }
+        let sanitized = msg.replace('\0', "?");
+        // SAFETY: `sanitized` is guaranteed to have no interior null bytes.
+        let c = CString::new(sanitized).expect("sanitized string should not contain NUL");
+        unsafe { *error_out = c.into_raw() };
     }
 }
 
@@ -54,11 +80,14 @@ unsafe fn cstr_to_str<'a>(
 }
 
 /// Write a Rust `String` into `*out` as a C string.
+///
+/// Interior null bytes in `s` are replaced with `?` so the caller always
+/// receives a valid C string.
 unsafe fn set_string_out(out: *mut *mut c_char, s: &str) {
     if !out.is_null() {
-        if let Ok(c) = CString::new(s) {
-            unsafe { *out = c.into_raw() };
-        }
+        let sanitized = s.replace('\0', "?");
+        let c = CString::new(sanitized).expect("sanitized string should not contain NUL");
+        unsafe { *out = c.into_raw() };
     }
 }
 
@@ -70,7 +99,8 @@ unsafe fn set_string_out(out: *mut *mut c_char, s: &str) {
 ///
 /// # Safety
 /// All pointer arguments must be valid C strings or null (for `error_out`).
-/// The caller must free any string written to `*error_out` via [`c2pa_string_free`].
+/// The caller must free any string written to `*error_out` via [`c2pa_string_free`]
+/// **before** calling this function again, or the previous string will leak.
 #[no_mangle]
 pub unsafe extern "C" fn c2pa_sign_file(
     input_path: *const c_char,
@@ -104,7 +134,7 @@ pub unsafe extern "C" fn c2pa_sign_file(
         })?;
 
         let mut builder = Builder::from_json(json).map_err(|e| {
-            unsafe { set_error(error_out, &format!("invalid manifest JSON: {e}")) };
+            unsafe { set_error(error_out, &format!("manifest json parsing failed: {e}")) };
             C2paResultCode::SignError
         })?;
 
@@ -112,7 +142,7 @@ pub unsafe extern "C" fn c2pa_sign_file(
         let _ = std::fs::remove_file(output);
 
         builder.sign_file(&*signer, input, output).map_err(|e| {
-            unsafe { set_error(error_out, &format!("sign failed: {e}")) };
+            unsafe { set_error(error_out, &format!("signing failed: {e}")) };
             C2paResultCode::SignError
         })?;
 
@@ -123,7 +153,7 @@ pub unsafe extern "C" fn c2pa_sign_file(
         Ok(Ok(code)) => code,
         Ok(Err(code)) => code,
         Err(_) => {
-            unsafe { set_error(error_out, "internal panic during c2pa_sign_file") };
+            unsafe { set_error(error_out, "internal panic in c2pa_sign_file") };
             C2paResultCode::InternalError
         }
     }
@@ -137,7 +167,8 @@ pub unsafe extern "C" fn c2pa_sign_file(
 /// ```
 ///
 /// # Safety
-/// The caller must free `*result_json` and `*error_out` via [`c2pa_string_free`].
+/// The caller must free `*result_json` and `*error_out` via [`c2pa_string_free`]
+/// **before** calling this function again, or previous strings will leak.
 #[no_mangle]
 pub unsafe extern "C" fn c2pa_verify_file(
     file_path: *const c_char,
@@ -193,7 +224,7 @@ pub unsafe extern "C" fn c2pa_verify_file(
         Ok(Ok(code)) => code,
         Ok(Err(code)) => code,
         Err(_) => {
-            unsafe { set_error(error_out, "internal panic during c2pa_verify_file") };
+            unsafe { set_error(error_out, "internal panic in c2pa_verify_file") };
             C2paResultCode::InternalError
         }
     }
@@ -204,7 +235,8 @@ pub unsafe extern "C" fn c2pa_verify_file(
 /// On success, `*info_json` is set to the manifest JSON string.
 ///
 /// # Safety
-/// The caller must free `*info_json` and `*error_out` via [`c2pa_string_free`].
+/// The caller must free `*info_json` and `*error_out` via [`c2pa_string_free`]
+/// **before** calling this function again, or previous strings will leak.
 #[no_mangle]
 pub unsafe extern "C" fn c2pa_info_file(
     file_path: *const c_char,
@@ -222,7 +254,7 @@ pub unsafe extern "C" fn c2pa_info_file(
         let path = unsafe { cstr_to_str(file_path, error_out)? };
 
         let reader = Reader::from_file(path).map_err(|e| {
-            unsafe { set_error(error_out, &format!("failed to read manifest: {e}")) };
+            unsafe { set_error(error_out, &format!("manifest read failed: {e}")) };
             C2paResultCode::VerifyError
         })?;
 
@@ -235,7 +267,7 @@ pub unsafe extern "C" fn c2pa_info_file(
         Ok(Ok(code)) => code,
         Ok(Err(code)) => code,
         Err(_) => {
-            unsafe { set_error(error_out, "internal panic during c2pa_info_file") };
+            unsafe { set_error(error_out, "internal panic in c2pa_info_file") };
             C2paResultCode::InternalError
         }
     }

@@ -43,7 +43,8 @@ typedef enum C2paResultCode {
  *
  * # Safety
  * All pointer arguments must be valid C strings or null (for `error_out`).
- * The caller must free any string written to `*error_out` via [`c2pa_string_free`].
+ * The caller must free any string written to `*error_out` via [`c2pa_string_free`]
+ * **before** calling this function again, or the previous string will leak.
  */
 enum C2paResultCode c2pa_sign_file(const char *input_path,
                                    const char *output_path,
@@ -61,7 +62,8 @@ enum C2paResultCode c2pa_sign_file(const char *input_path,
  * ```
  *
  * # Safety
- * The caller must free `*result_json` and `*error_out` via [`c2pa_string_free`].
+ * The caller must free `*result_json` and `*error_out` via [`c2pa_string_free`]
+ * **before** calling this function again, or previous strings will leak.
  */
 enum C2paResultCode c2pa_verify_file(const char *file_path, char **result_json, char **error_out);
 
@@ -71,7 +73,8 @@ enum C2paResultCode c2pa_verify_file(const char *file_path, char **result_json, 
  * On success, `*info_json` is set to the manifest JSON string.
  *
  * # Safety
- * The caller must free `*info_json` and `*error_out` via [`c2pa_string_free`].
+ * The caller must free `*info_json` and `*error_out` via [`c2pa_string_free`]
+ * **before** calling this function again, or previous strings will leak.
  */
 enum C2paResultCode c2pa_info_file(const char *file_path, char **info_json, char **error_out);
 
