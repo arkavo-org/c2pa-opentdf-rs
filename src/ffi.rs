@@ -71,12 +71,10 @@ unsafe fn cstr_to_str<'a>(
         unsafe { set_error(error_out, "null pointer argument") };
         return Err(C2paResultCode::NullPointer);
     }
-    unsafe { CStr::from_ptr(p) }
-        .to_str()
-        .map_err(|e| {
-            unsafe { set_error(error_out, &format!("invalid UTF-8: {e}")) };
-            C2paResultCode::InvalidUtf8
-        })
+    unsafe { CStr::from_ptr(p) }.to_str().map_err(|e| {
+        unsafe { set_error(error_out, &format!("invalid UTF-8: {e}")) };
+        C2paResultCode::InvalidUtf8
+    })
 }
 
 /// Write a Rust `String` into `*out` as a C string.
@@ -122,16 +120,12 @@ pub unsafe extern "C" fn c2pa_sign_file(
         let cert = unsafe { cstr_to_str(cert_pem, error_out)? };
         let key = unsafe { cstr_to_str(key_pem, error_out)? };
 
-        let signer = create_signer::from_keys(
-            cert.as_bytes(),
-            key.as_bytes(),
-            SigningAlg::Es256,
-            None,
-        )
-        .map_err(|e| {
-            unsafe { set_error(error_out, &format!("signer creation failed: {e}")) };
-            C2paResultCode::SignError
-        })?;
+        let signer =
+            create_signer::from_keys(cert.as_bytes(), key.as_bytes(), SigningAlg::Es256, None)
+                .map_err(|e| {
+                    unsafe { set_error(error_out, &format!("signer creation failed: {e}")) };
+                    C2paResultCode::SignError
+                })?;
 
         let mut builder = Builder::from_json(json).map_err(|e| {
             unsafe { set_error(error_out, &format!("manifest json parsing failed: {e}")) };

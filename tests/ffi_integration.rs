@@ -119,7 +119,12 @@ fn test_sign_file_success() {
 #[test]
 fn test_sign_then_verify_roundtrip() {
     let (code, tmp, err) = sign_to_temp();
-    assert_eq!(code, C2paResultCode::Success, "sign error: {:?}", err.as_str());
+    assert_eq!(
+        code,
+        C2paResultCode::Success,
+        "sign error: {:?}",
+        err.as_str()
+    );
 
     let file_path = CString::new(tmp.path().to_str().unwrap()).unwrap();
     let mut result_json: *mut c_char = ptr::null_mut();
@@ -129,20 +134,33 @@ fn test_sign_then_verify_roundtrip() {
     let result = FfiString::new(result_json);
     let err = FfiString::new(error);
 
-    assert_eq!(code, C2paResultCode::Success, "verify error: {:?}", err.as_str());
+    assert_eq!(
+        code,
+        C2paResultCode::Success,
+        "verify error: {:?}",
+        err.as_str()
+    );
 
     let json_str = result.as_str().expect("result_json should be non-null");
     let v: serde_json::Value = serde_json::from_str(json_str).expect("valid JSON");
     assert_eq!(v["has_manifest"], true, "manifest should be present");
     // Note: is_valid may be false with a self-signed test cert (trust chain validation)
     // but the manifest must be present and parseable
-    assert!(v["manifest_json"].is_string(), "manifest_json should be a string");
+    assert!(
+        v["manifest_json"].is_string(),
+        "manifest_json should be a string"
+    );
 }
 
 #[test]
 fn test_sign_then_info_roundtrip() {
     let (code, tmp, err) = sign_to_temp();
-    assert_eq!(code, C2paResultCode::Success, "sign error: {:?}", err.as_str());
+    assert_eq!(
+        code,
+        C2paResultCode::Success,
+        "sign error: {:?}",
+        err.as_str()
+    );
 
     let file_path = CString::new(tmp.path().to_str().unwrap()).unwrap();
     let mut info_json: *mut c_char = ptr::null_mut();
@@ -152,7 +170,12 @@ fn test_sign_then_info_roundtrip() {
     let info = FfiString::new(info_json);
     let err = FfiString::new(error);
 
-    assert_eq!(code, C2paResultCode::Success, "info error: {:?}", err.as_str());
+    assert_eq!(
+        code,
+        C2paResultCode::Success,
+        "info error: {:?}",
+        err.as_str()
+    );
 
     let json_str = info.as_str().expect("info_json should be non-null");
     assert!(
@@ -174,7 +197,10 @@ fn test_verify_unsigned_file() {
 
     let json_str = result.as_str().expect("result_json should be non-null");
     let v: serde_json::Value = serde_json::from_str(json_str).expect("valid JSON");
-    assert_eq!(v["has_manifest"], false, "unsigned file should have no manifest");
+    assert_eq!(
+        v["has_manifest"], false,
+        "unsigned file should have no manifest"
+    );
 }
 
 #[test]
@@ -216,9 +242,7 @@ fn test_sign_null_pointer() {
 
     assert_eq!(code, C2paResultCode::NullPointer);
     assert!(
-        err.as_str()
-            .unwrap_or("")
-            .contains("null"),
+        err.as_str().unwrap_or("").contains("null"),
         "error should mention null: {:?}",
         err.as_str()
     );
@@ -235,9 +259,7 @@ fn test_verify_null_pointer() {
 
     assert_eq!(code, C2paResultCode::NullPointer);
     assert!(
-        err.as_str()
-            .unwrap_or("")
-            .contains("null"),
+        err.as_str().unwrap_or("").contains("null"),
         "error should mention null"
     );
 }
@@ -401,10 +423,7 @@ fn test_server_sign() {
         response["manifest"].is_string(),
         "response should include manifest"
     );
-    assert!(
-        response["hash"].is_string(),
-        "response should include hash"
-    );
+    assert!(response["hash"].is_string(), "response should include hash");
 }
 
 #[test]
@@ -433,9 +452,7 @@ fn test_server_sign_validate_roundtrip() {
 
     assert_eq!(sign_response["status"], "success");
 
-    let manifest = sign_response["manifest"]
-        .as_str()
-        .expect("manifest string");
+    let manifest = sign_response["manifest"].as_str().expect("manifest string");
 
     // Validate
     let validate_body = serde_json::json!({
@@ -473,10 +490,8 @@ fn test_server_invalid_hash() {
 
     match result {
         Ok(mut resp) => {
-            let response: serde_json::Value = resp
-                .body_mut()
-                .read_json()
-                .expect("parse error response");
+            let response: serde_json::Value =
+                resp.body_mut().read_json().expect("parse error response");
             assert_eq!(
                 response["status"], "error",
                 "invalid hash should return error: {response}"
