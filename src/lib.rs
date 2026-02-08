@@ -1,4 +1,5 @@
 mod error;
+pub mod ffi;
 mod signer;
 
 pub use error::C2paOpenTdfError;

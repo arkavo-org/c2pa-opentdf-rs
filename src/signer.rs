@@ -40,9 +40,7 @@ impl C2paOpenTdf {
         output_path: impl AsRef<Path>,
     ) -> Result<Vec<u8>> {
         // Step 1: Create a temporary file for C2PA signed data (needs proper extension)
-        let temp_signed = tempfile::Builder::new()
-            .suffix(".png")
-            .tempfile()?;
+        let temp_signed = tempfile::Builder::new().suffix(".png").tempfile()?;
         let temp_signed_path = temp_signed.path();
 
         // Step 2: Sign the data with C2PA
@@ -68,9 +66,7 @@ impl C2paOpenTdf {
         )?;
 
         // Write original data to a temp file for signing (needs proper extension)
-        let temp_input = tempfile::Builder::new()
-            .suffix(".png")
-            .tempfile()?;
+        let temp_input = tempfile::Builder::new().suffix(".png").tempfile()?;
         std::fs::write(temp_input.path(), data)?;
 
         // Remove temp signed file if it exists (c2pa won't overwrite)
@@ -216,8 +212,7 @@ impl C2paOpenTdfBuilder {
     /// Build the C2paOpenTdf instance
     pub fn build(self) -> Result<C2paOpenTdf> {
         // Load certificate and key
-        let (cert_data, key_data) = if let (Some(cert), Some(key)) =
-            (self.cert_data, self.key_data)
+        let (cert_data, key_data) = if let (Some(cert), Some(key)) = (self.cert_data, self.key_data)
         {
             (cert, key)
         } else if let (Some(cert_path), Some(key_path)) = (self.cert_path, self.key_path) {
@@ -228,9 +223,9 @@ impl C2paOpenTdfBuilder {
             ));
         };
 
-        let kas_url = self.kas_url.ok_or_else(|| {
-            C2paOpenTdfError::Configuration("KAS URL is required".to_string())
-        })?;
+        let kas_url = self
+            .kas_url
+            .ok_or_else(|| C2paOpenTdfError::Configuration("KAS URL is required".to_string()))?;
 
         // Create signer
         let signer = create_signer::from_keys(&cert_data, &key_data, self.signing_alg, None)?;
@@ -278,9 +273,7 @@ mod tests {
         let test_data = std::fs::read("tests/data/logo.png")?;
 
         // Use tempfile to avoid conflicts
-        let temp_output = tempfile::Builder::new()
-            .suffix(".tdf")
-            .tempfile()?;
+        let temp_output = tempfile::Builder::new().suffix(".tdf").tempfile()?;
         let output_path = temp_output.path();
 
         let encrypted = c2pa_tdf.sign_and_encrypt(&test_data, "Test Image", output_path)?;
